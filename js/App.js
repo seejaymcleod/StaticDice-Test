@@ -62,6 +62,9 @@
         };
         document.addEventListener('pointerup', handleGlobalRelease);
         document.addEventListener('pointercancel', handleGlobalRelease);
+        document.addEventListener('webkitmouseforcewillbegin', (e) => {
+            e.preventDefault();
+        });
 
         var engine = new DiceEngine();
         var pickerTargetId = null;

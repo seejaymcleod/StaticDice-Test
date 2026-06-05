@@ -657,15 +657,17 @@
                 let startX = 0, startY = 0;
 
                 const startHold = (e) => {
+                    if (e.target.closest('button, input, textarea, select, .timer-bar-container')) {
+                        return;
+                    }
                     isHold = false;
                     hasMoved = false;
                     const touch = e.touches ? e.touches[0] : e;
                     startX = touch.clientX;
                     startY = touch.clientY;
                     holdTimer = setTimeout(() => {
-                        if (isHold) return; // contextmenu already opened the menu
                         isHold = true;
-                        toggleArsenalMenu(q.id, e);
+                        vibrate(15);
                     }, 500);
                 };
 
@@ -683,6 +685,59 @@
                         cancelHold();
                         hasMoved = true;
                     }
+                };
+
+                const bindHoldListeners = (el) => {
+                    el.addEventListener('touchstart', startHold, { passive: true });
+                    el.addEventListener('touchend', (e) => {
+                        cancelHold();
+                        if (isHold) {
+                            if (!hasMoved) {
+                                toggleArsenalMenu(q.id, e);
+                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                        setTimeout(() => { hasMoved = false; isHold = false; }, 50);
+                    });
+                    el.addEventListener('touchmove', moveHold, { passive: true });
+                    el.addEventListener('touchcancel', () => {
+                        cancelHold();
+                        hasMoved = false;
+                        isHold = false;
+                    });
+
+                    el.addEventListener('mousedown', (e) => {
+                        if (e.button === 0) startHold(e);
+                    });
+                    el.addEventListener('mouseup', (e) => {
+                        cancelHold();
+                        if (isHold) {
+                            if (!hasMoved) {
+                                toggleArsenalMenu(q.id, e);
+                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                        setTimeout(() => { hasMoved = false; isHold = false; }, 50);
+                    });
+                    el.addEventListener('mousemove', moveHold);
+                    el.addEventListener('mouseleave', () => {
+                        cancelHold();
+                        hasMoved = false;
+                        isHold = false;
+                    });
+
+                    el.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (hasMoved) return;
+                        cancelHold();
+                        if (!isHold) {
+                            toggleArsenalMenu(q.id, e);
+                        }
+                        isHold = false;
+                    });
                 };
 
                 const wrapper = document.createElement('div');
@@ -762,48 +817,7 @@
                 item.className = 'saved-item pl-5 pr-3 py-2 rounded-xl flex items-center cursor-pointer group flex-grow min-w-0 relative overflow-hidden';
                 item.dataset.id = q.id;
 
-                item.addEventListener('touchstart', startHold, { passive: true });
-                item.addEventListener('touchend', (e) => {
-                    cancelHold();
-                    if (isHold) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                    setTimeout(() => { hasMoved = false; }, 50);
-                });
-                item.addEventListener('touchmove', moveHold, { passive: true });
-                item.addEventListener('touchcancel', () => {
-                    cancelHold();
-                    hasMoved = false;
-                });
-
-                item.addEventListener('mousedown', (e) => {
-                    if (e.button === 0) startHold(e);
-                });
-                item.addEventListener('mouseup', (e) => {
-                    cancelHold();
-                    setTimeout(() => { hasMoved = false; }, 50);
-                });
-                item.addEventListener('mousemove', moveHold);
-                item.addEventListener('mouseleave', () => {
-                    cancelHold();
-                    hasMoved = false;
-                });
-
-                // contextmenu fires on desktop right-click AND on Android after a
-                // long-press (after the timer has already opened the menu).
-                // We always prevent the native menu; cancel the timer so it
-                // can't double-toggle the menu closed after contextmenu opens it.
-                item.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (hasMoved) return;
-                    cancelHold();
-                    if (!isHold) {
-                        toggleArsenalMenu(q.id, e);
-                    }
-                    isHold = false;
-                });
+                bindHoldListeners(item);
 
                 const isDiceless = type === 'roller' && !(q.unifiedQueue || []).some(node => node.nodeType === 'node');
 
@@ -1202,25 +1216,11 @@
                 } else if (type === 'countdown') {
                     // Countdown widgets build their own self-contained element
                     const ctEl = buildCountdownWidget(q);
-                    ctEl.addEventListener('contextmenu', (e) => {
-                        if (e.target.closest('.widget-drag-handle') || e.target.closest('.ct-drag-handle')) {
-                            return;
-                        }
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleArsenalMenu(q.id, e);
-                    });
+                    bindHoldListeners(ctEl);
                     wrapper.appendChild(ctEl);
                 } else if (type === 'timer') {
                     const ctEl = buildTimerWidget(q);
-                    ctEl.addEventListener('contextmenu', (e) => {
-                        if (e.target.closest('.widget-drag-handle') || e.target.closest('.ct-drag-handle')) {
-                            return;
-                        }
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleArsenalMenu(q.id, e);
-                    });
+                    bindHoldListeners(ctEl);
                     wrapper.appendChild(ctEl);
                 }
 
